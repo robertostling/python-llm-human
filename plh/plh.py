@@ -136,9 +136,10 @@ class PLH:
     tools: dict[str, dict]
     llm_functions: dict[str, dict]
 
-    def __init__(self):
+    def __init__(self, verbosity=0):
         self.tools = {}
         self.llm_functions = {}
+        self.verbosity = verbosity
 
     def chat_call(self, messages, model, temperature, response_format):
         """Wrapper around OpenAI's chat completion with structured output."""
@@ -166,7 +167,8 @@ class PLH:
 
         message = completion.choices[0].message
 
-        # print(json.dumps(message.model_dump(), indent=4))
+        if self.verbosity >= 3:
+            print(json.dumps(message.model_dump(), indent=4))
 
         if not message.tool_calls:
             return completion.choices[0].message.parsed
@@ -186,7 +188,7 @@ class PLH:
                 )
             print_call = tool.get("print_call", False)
             ask_before_call = tool.get("ask_before_call", False)
-            if print_call or ask_before_call:
+            if self.verbosity >= 3 or print_call or ask_before_call:
                 argument_json = json.dumps(argument.model_dump(), indent=4)
                 print(f"{function_name}({argument_json})")
             result = None
@@ -215,7 +217,7 @@ class PLH:
                 result = tool["function"](**argument.model_dump())
             if issubclass(type(result), BaseModel):
                 result = result.model_dump()
-            if print_call:
+            if self.verbosity >= 3 or print_call:
                 print("return", json.dumps(result, indent=4))
             result_messages.append(
                 dict(
